@@ -26,7 +26,62 @@ def test_analyze_event_requires_credentials():
     response = client.post("/api/v1/events/evt-ai-001/analyze", json={})
 
     assert response.status_code == 400
-    assert "API key" in response.json()["detail"]
+    assert "GLM API key" in response.json()["detail"]
+
+
+def test_analyze_event_ignores_request_credentials(monkeypatch):
+    captured = {}
+
+    async def fake_post(self, url, headers=None, json=None):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+
+        class Response:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"summary":"ok","impact":"low","suggestions":["open window"],"energy_saving":"save"}'
+                            }
+                        }
+                    ]
+                }
+
+        return Response()
+
+    monkeypatch.setenv("GLM_API_KEY", "server-key")
+    monkeypatch.setenv("GLM_BASE_URL", "https://server.example/v1")
+    monkeypatch.setenv("GLM_MODEL", "server-model")
+    monkeypatch.setattr("httpx.AsyncClient.post", fake_post)
+
+    client = TestClient(app)
+    client.post(
+        "/api/v1/edge/events",
+        json={
+            "event_id": "evt-ai-fixed-provider-001",
+            "room_id": "A101",
+            "event_type": "HIGH_CO2",
+            "level": "warning",
+            "message": "A101 教室 CO2 浓度偏高",
+            "metrics": {"avg_co2": 1260, "avg_temperature": 29.1, "max_people_count": 42},
+            "timestamp": datetime(2026, 5, 13, 20, 0, 0).isoformat(),
+        },
+    )
+
+    response = client.post(
+        "/api/v1/events/evt-ai-fixed-provider-001/analyze",
+        json={"api_key": "user-key", "base_url": "https://user.example/v1", "model": "user-model"},
+    )
+
+    assert response.status_code == 200
+    assert captured["url"] == "https://server.example/v1/chat/completions"
+    assert captured["headers"]["Authorization"] == "Bearer server-key"
+    assert captured["json"]["model"] == "server-model"
 
 
 def test_list_ai_analysis_records():

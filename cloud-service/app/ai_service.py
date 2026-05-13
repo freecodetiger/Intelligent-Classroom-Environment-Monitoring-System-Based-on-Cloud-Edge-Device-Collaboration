@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Optional
+from typing import Any
 
 import httpx
+
+DEFAULT_GLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
+DEFAULT_GLM_MODEL = "glm-4-flash"
 
 
 def _extract_json(content: str) -> dict[str, Any]:
@@ -17,15 +20,12 @@ def _extract_json(content: str) -> dict[str, Any]:
 
 async def analyze_environment(
     event: dict[str, Any],
-    api_key: Optional[str],
-    base_url: Optional[str],
-    model: Optional[str],
 ) -> dict[str, Any]:
-    resolved_key = (api_key or os.getenv("OPENAI_API_KEY") or "").strip()
-    resolved_base_url = (base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
-    resolved_model = (model or os.getenv("OPENAI_MODEL") or "gpt-4o-mini").strip()
+    resolved_key = (os.getenv("GLM_API_KEY") or "").strip()
+    resolved_base_url = (os.getenv("GLM_BASE_URL") or DEFAULT_GLM_BASE_URL).rstrip("/")
+    resolved_model = (os.getenv("GLM_MODEL") or DEFAULT_GLM_MODEL).strip()
     if not resolved_key:
-        raise ValueError("API key is required")
+        raise ValueError("GLM API key is required")
 
     prompt = (
         "你是一个智慧教室环境管理助手。请根据以下异常事件数据生成简洁、可执行的管理建议。"

@@ -64,15 +64,15 @@ npm run dev
 
 ## AI 配置
 
-前端设置区可以填写 OpenAI-compatible API Key、Base URL 和模型名。云端也支持 `.env`：
+前端不暴露模型配置入口。云端固定使用 GLM 免费模型，服务端通过环境变量配置：
 
 ```env
-OPENAI_API_KEY=your-key
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
+GLM_API_KEY=your-key
+GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+GLM_MODEL=glm-4-flash
 ```
 
-API Key 不写入源码。当前 P0 支持由前端在触发分析时随请求提交，云端只用于本次调用。
+API Key 不写入源码，也不会由前端提交。
 
 ## 验证命令
 

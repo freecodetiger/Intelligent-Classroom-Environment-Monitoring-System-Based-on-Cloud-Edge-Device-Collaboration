@@ -186,12 +186,7 @@ async def analyze_event(event_id: str, request: AnalyzeRequest, db: Session = De
         "timestamp": event.timestamp.isoformat(),
     }
     try:
-        result = await analyze_environment(
-            event_payload,
-            request.api_key,
-            request.base_url,
-            request.model,
-        )
+        result = await analyze_environment(event_payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

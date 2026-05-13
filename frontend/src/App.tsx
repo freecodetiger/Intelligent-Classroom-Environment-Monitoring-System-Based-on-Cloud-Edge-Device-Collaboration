@@ -4,11 +4,9 @@ import {
   AlertTriangle,
   Bot,
   Building2,
-  CheckCircle2,
   Gauge,
   ListFilter,
   RefreshCw,
-  Settings,
   Thermometer,
   Users,
   Wind,
@@ -19,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 const envApiBase = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE;
 const API_BASE = envApiBase ?? (window.location.port === "5173" ? "http://localhost:8000" : "");
 
-type Page = "overview" | "detail" | "events" | "ai" | "settings";
+type Page = "overview" | "detail" | "events" | "ai";
 type Room = { room_id: string; room_name?: string; building?: string; capacity?: number };
 type Metric = {
   room_id: string;
@@ -54,7 +52,6 @@ const navItems: Array<{ page: Page; label: string; icon: React.ReactNode }> = [
   { page: "detail", label: "教室详情", icon: <Gauge size={16} /> },
   { page: "events", label: "异常事件", icon: <AlertTriangle size={16} /> },
   { page: "ai", label: "AI 建议", icon: <Bot size={16} /> },
-  { page: "settings", label: "模型设置", icon: <Settings size={16} /> },
 ];
 
 export default function App() {
@@ -66,9 +63,6 @@ export default function App() {
   const [history, setHistory] = useState<Metric[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [analysisRecords, setAnalysisRecords] = useState<AIAnalysis[]>([]);
-  const [apiKey, setApiKey] = useState(localStorage.getItem("llm_api_key") ?? "");
-  const [baseUrl, setBaseUrl] = useState(localStorage.getItem("llm_base_url") ?? "https://api.openai.com/v1");
-  const [model, setModel] = useState(localStorage.getItem("llm_model") ?? "gpt-4o-mini");
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [eventFilter, setEventFilter] = useState<"all" | "critical" | "warning" | "info">("all");
   const [loading, setLoading] = useState(false);
@@ -124,9 +118,6 @@ export default function App() {
   const status = getStatus(latest, selectedEvents);
 
   async function analyze(eventId: string) {
-    localStorage.setItem("llm_api_key", apiKey);
-    localStorage.setItem("llm_base_url", baseUrl);
-    localStorage.setItem("llm_model", model);
     setError("");
     setAnalysis(null);
     setLoading(true);
@@ -134,7 +125,7 @@ export default function App() {
       const response = await fetch(`${API_BASE}/api/v1/events/${eventId}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_key: apiKey, base_url: baseUrl, model }),
+        body: JSON.stringify({}),
       });
       if (!response.ok) {
         const body = await response.json();
@@ -148,13 +139,6 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function saveSettings() {
-    localStorage.setItem("llm_api_key", apiKey);
-    localStorage.setItem("llm_base_url", baseUrl);
-    localStorage.setItem("llm_model", model);
-    setError("");
   }
 
   return (
@@ -234,18 +218,6 @@ export default function App() {
             events={events}
             onAnalyze={analyze}
             loading={loading}
-          />
-        )}
-
-        {activePage === "settings" && (
-          <SettingsPage
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            baseUrl={baseUrl}
-            setBaseUrl={setBaseUrl}
-            model={model}
-            setModel={setModel}
-            onSave={saveSettings}
           />
         )}
       </main>
@@ -424,7 +396,7 @@ function AIPage(props: {
       <section className="panel analysisPanel">
         <div className="panelHeader">
           <h2>最新 AI 建议</h2>
-          <span>由用户配置的大模型接口生成</span>
+          <span>由服务器内置 GLM 免费模型生成</span>
         </div>
         <AnalysisBlock analysis={props.currentAnalysis ?? props.records[0]} />
       </section>
@@ -447,48 +419,6 @@ function AIPage(props: {
           </div>
         ))}
         {props.records.length === 0 && <p className="empty">还没有 AI 建议。请先在异常事件页触发分析。</p>}
-      </section>
-    </div>
-  );
-}
-
-function SettingsPage(props: {
-  apiKey: string;
-  setApiKey: (value: string) => void;
-  baseUrl: string;
-  setBaseUrl: (value: string) => void;
-  model: string;
-  setModel: (value: string) => void;
-  onSave: () => void;
-}) {
-  return (
-    <div className="settingsGrid">
-      <section className="panel settingsPanel">
-        <div className="panelHeader">
-          <h2>大模型连接</h2>
-          <span>OpenAI-compatible</span>
-        </div>
-        <label>API Key</label>
-        <input type="password" placeholder="sk-..." value={props.apiKey} onChange={(event) => props.setApiKey(event.target.value)} />
-        <label>Base URL</label>
-        <input value={props.baseUrl} onChange={(event) => props.setBaseUrl(event.target.value)} />
-        <label>Model</label>
-        <input value={props.model} onChange={(event) => props.setModel(event.target.value)} />
-        <button className="primaryButton" onClick={props.onSave}>
-          <CheckCircle2 size={16} />
-          保存到本地浏览器
-        </button>
-      </section>
-      <section className="panel">
-        <div className="panelHeader">
-          <h2>运行说明</h2>
-          <span>本地 P0</span>
-        </div>
-        <div className="notes">
-          <p>API Key 只保存在当前浏览器 localStorage 中，触发分析时随请求发送到云端。</p>
-          <p>云端也支持通过 `.env` 配置 `OPENAI_API_KEY`、`OPENAI_BASE_URL` 和 `OPENAI_MODEL`。</p>
-          <p>迁移到云服务器时，只需要将边缘服务的 `CLOUD_BASE_URL` 指向服务器云端地址。</p>
-        </div>
       </section>
     </div>
   );
@@ -603,6 +533,5 @@ function pageTitle(page: Page, roomId: string) {
   if (page === "overview") return "教室总览";
   if (page === "detail") return `${roomId} 教室详情`;
   if (page === "events") return "异常事件";
-  if (page === "ai") return "AI 建议";
-  return "模型设置";
+  return "AI 建议";
 }
