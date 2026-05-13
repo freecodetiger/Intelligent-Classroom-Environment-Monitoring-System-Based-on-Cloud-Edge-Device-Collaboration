@@ -6,8 +6,8 @@ from typing import Any
 
 import httpx
 
-DEFAULT_GLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
-DEFAULT_GLM_MODEL = "glm-4-flash"
+DEFAULT_GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+DEFAULT_GLM_MODEL = "GLM-4.7-Flash"
 
 
 def _extract_json(content: str) -> dict[str, Any]:
@@ -22,7 +22,10 @@ async def analyze_environment(
     event: dict[str, Any],
 ) -> dict[str, Any]:
     resolved_key = (os.getenv("GLM_API_KEY") or "").strip()
-    resolved_base_url = (os.getenv("GLM_BASE_URL") or DEFAULT_GLM_BASE_URL).rstrip("/")
+    resolved_api_url = (os.getenv("GLM_API_URL") or "").strip()
+    if not resolved_api_url:
+        resolved_base_url = (os.getenv("GLM_BASE_URL") or "").rstrip("/")
+        resolved_api_url = f"{resolved_base_url}/chat/completions" if resolved_base_url else DEFAULT_GLM_API_URL
     resolved_model = (os.getenv("GLM_MODEL") or DEFAULT_GLM_MODEL).strip()
     if not resolved_key:
         raise ValueError("GLM API key is required")
@@ -47,7 +50,7 @@ async def analyze_environment(
 
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(
-            f"{resolved_base_url}/chat/completions",
+            resolved_api_url,
             headers=headers,
             json=payload,
         )

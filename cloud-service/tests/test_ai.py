@@ -84,6 +84,56 @@ def test_analyze_event_ignores_request_credentials(monkeypatch):
     assert captured["json"]["model"] == "server-model"
 
 
+def test_analyze_event_uses_full_glm_api_url(monkeypatch):
+    captured = {}
+
+    async def fake_post(self, url, headers=None, json=None):
+        captured["url"] = url
+        captured["json"] = json
+
+        class Response:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"summary":"ok","impact":"low","suggestions":["open window"],"energy_saving":"save"}'
+                            }
+                        }
+                    ]
+                }
+
+        return Response()
+
+    monkeypatch.setenv("GLM_API_KEY", "server-key")
+    monkeypatch.delenv("GLM_BASE_URL", raising=False)
+    monkeypatch.setenv("GLM_API_URL", "https://glm.example/v4/chat/completions")
+    monkeypatch.setattr("httpx.AsyncClient.post", fake_post)
+
+    client = TestClient(app)
+    client.post(
+        "/api/v1/edge/events",
+        json={
+            "event_id": "evt-ai-full-url-001",
+            "room_id": "A101",
+            "event_type": "HIGH_CO2",
+            "level": "warning",
+            "message": "A101 教室 CO2 浓度偏高",
+            "metrics": {"avg_co2": 1260, "avg_temperature": 29.1, "max_people_count": 42},
+            "timestamp": datetime(2026, 5, 13, 20, 0, 0).isoformat(),
+        },
+    )
+
+    response = client.post("/api/v1/events/evt-ai-full-url-001/analyze", json={})
+
+    assert response.status_code == 200
+    assert captured["url"] == "https://glm.example/v4/chat/completions"
+    assert captured["json"]["model"] == "GLM-4.7-Flash"
+
+
 def test_list_ai_analysis_records():
     db: Session = SessionLocal()
     db.add(

@@ -68,8 +68,8 @@ npm run dev
 
 ```env
 GLM_API_KEY=your-key
-GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
-GLM_MODEL=glm-4-flash
+GLM_API_URL=https://open.bigmodel.cn/api/paas/v4/chat/completions
+GLM_MODEL=GLM-4.7-Flash
 ```
 
 API Key 不写入源码，也不会由前端提交。
