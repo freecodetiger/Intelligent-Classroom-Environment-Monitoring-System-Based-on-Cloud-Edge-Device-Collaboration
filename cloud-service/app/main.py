@@ -151,6 +151,23 @@ def list_events(db: Session = Depends(get_db)) -> list[dict[str, object]]:
     ]
 
 
+@app.get("/api/v1/analysis")
+def list_analysis(db: Session = Depends(get_db)) -> list[dict[str, object]]:
+    rows = db.scalars(select(AIAnalysis).order_by(desc(AIAnalysis.created_at), desc(AIAnalysis.id)).limit(100)).all()
+    return [
+        {
+            "event_id": row.event_id,
+            "room_id": row.room_id,
+            "summary": row.summary,
+            "impact": row.impact,
+            "suggestions": json.loads(row.suggestions),
+            "energy_saving": row.energy_saving,
+            "created_at": row.created_at.isoformat() if hasattr(row.created_at, "isoformat") else str(row.created_at),
+        }
+        for row in rows
+    ]
+
+
 @app.post("/api/v1/events/{event_id}/analyze")
 async def analyze_event(event_id: str, request: AnalyzeRequest, db: Session = Depends(get_db)) -> dict[str, object]:
     from app.ai_service import analyze_environment
