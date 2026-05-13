@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const API_BASE =
-  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE ?? "http://localhost:8000";
+const envApiBase = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE;
+const API_BASE = envApiBase ?? (window.location.port === "5173" ? "http://localhost:8000" : "");
 
 type Page = "overview" | "detail" | "events" | "ai" | "settings";
 type Room = { room_id: string; room_name?: string; building?: string; capacity?: number };
