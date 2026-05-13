@@ -97,7 +97,7 @@ def latest_room_data(room_id: str, db: Session = Depends(get_db)) -> dict[str, o
     row = db.scalar(
         select(SensorData)
         .where(SensorData.room_id == room_id)
-        .order_by(desc(SensorData.timestamp), desc(SensorData.id))
+        .order_by(desc(SensorData.id))
     )
     if row is None:
         raise HTTPException(status_code=404, detail="room data not found")
