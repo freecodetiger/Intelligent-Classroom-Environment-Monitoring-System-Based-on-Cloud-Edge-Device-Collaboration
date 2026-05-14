@@ -117,9 +117,10 @@ def room_history(room_id: str, db: Session = Depends(get_db)) -> list[dict[str, 
     rows = db.scalars(
         select(SensorData)
         .where(SensorData.room_id == room_id)
-        .order_by(SensorData.timestamp, SensorData.id)
+        .order_by(desc(SensorData.timestamp), desc(SensorData.id))
         .limit(100)
     ).all()
+    rows = list(reversed(rows))
     return [
         {
             "room_id": row.room_id,
